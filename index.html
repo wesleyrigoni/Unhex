@@ -8,6 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;400;800&family=Bebas+Neue&family=Syncopate:wght@700&display=swap');
@@ -57,7 +58,7 @@
         #counter { 
             font-family: 'Bebas Neue', sans-serif; 
             font-size: clamp(8rem, 45vw, 20rem); 
-            line-height: 1.1; /* Correção para não cortar o topo */
+            line-height: 1.1; 
             background: linear-gradient(180deg, #fff 50%, #333 100%); 
             -webkit-background-clip: text; 
             -webkit-text-fill-color: transparent; 
@@ -67,6 +68,12 @@
 
         .controls { position: absolute; bottom: 40px; background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); padding: 15px 45px; border-radius: 100px; display: flex; gap: 60px; border: 1px solid rgba(255,255,255,0.1); }
         .btn { background: none; border: none; color: #fff; font-size: 3rem; cursor: pointer; transition: 0.2s; }
+
+        .notify-test { 
+            background: none; border: 1px solid rgba(255,255,255,0.1); color: #444; 
+            padding: 5px 15px; border-radius: 20px; font-size: 0.6rem; 
+            margin-bottom: 10px; cursor: pointer; text-transform: uppercase;
+        }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); backdrop-filter: blur(15px); z-index: 100; justify-content: center; align-items: center; padding: 25px; }
         .modal-content { background: #111; padding: 30px; border-radius: 25px; border: 1px solid #333; max-width: 500px; width: 100%; }
@@ -95,6 +102,8 @@
         
         <div class="rank-label" id="rank-name">Recruta</div>
         <div id="counter">0</div>
+        
+        <button class="notify-test" onclick="testeNotificacao()">Testar Notificação</button>
         <div id="log" class="sabotage-log"></div>
     </div>
 
@@ -105,88 +114,98 @@
 
     <div id="infoModal" class="modal">
         <div class="modal-content">
-            <h2>REGRAS DO JOGO</h2>
+            <h2>REGRAS DA JORNADA</h2>
             <div class="instruction-section">
                 <h3>🕒 Como funciona</h3>
-                <p>O sistema é automático. A cada 24 horas completas, você ganha <strong>+1 dia</strong> de progresso real na sua jornada.</p>
+                <p>Contagem automática. A cada 24h você ganha +1 dia real de progresso.</p>
             </div>
             <div class="instruction-section">
                 <h3>⭐ Conquistas</h3>
-                <li>• <strong>1 Dia:</strong> Primeira Estrela (Iniciado)</li>
-                <li>• <strong>3 Dias:</strong> Segunda Estrela (Focado)</li>
-                <li>• <strong>7 Dias:</strong> Terceira Estrela (Guardião)</li>
-                <li>• <strong>15 Dias:</strong> Quarta Estrela (Elite)</li>
-                <li>• <strong>30 Dias:</strong> Quinta Estrela (Mestre)</li>
+                <li>• 1 Dia: Estrela 1 (Iniciado)</li>
+                <li>• 3 Dias: Estrela 2 (Focado)</li>
+                <li>• 7 Dias: Estrela 3 (Guardião)</li>
+                <li>• 15 Dias: Estrela 4 (Elite)</li>
+                <li>• 30 Dias: Estrela 5 (Mestre)</li>
             </div>
             <div class="instruction-section">
                 <h3>🚫 Anti-Sabotagem</h3>
-                <p>Se você usar os botões <strong>+/-</strong>, o sistema registra como ajuste manual. A honestidade é o que gera a mudança!</p>
+                <p>Ajustes manuais ficam registrados. Seja honesto com você!</p>
             </div>
             <button class="close-modal" onclick="toggleModal(false)">VAMOS VENCER!</button>
         </div>
     </div>
 
 <script>
-    const STORAGE_KEY = 'unha_v15_github';
+    const STORAGE_KEY = 'unha_vFinal_notif';
+
+    // Registro do Service Worker (Vigia)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("Vigia Ativo"))
+        .catch(err => console.log("Erro Vigia:", err));
+    }
+
     function init() {
         if (!localStorage.getItem(STORAGE_KEY)) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify({ start: new Date().toISOString(), manual: 0 }));
         }
         render();
+        // Pede permissão 3 segundos após abrir
+        setTimeout(pedirPermissao, 3000);
     }
+
+    function pedirPermissao() {
+        if (Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+    }
+
+    function testeNotificacao() {
+        if (Notification.permission === "granted") {
+            new Notification("💅 Streak Control", {
+                body: "Notificações ativas! Continue firme!",
+                icon: "https://cdn-icons-png.flaticon.com/512/1022/1022319.png"
+            });
+        } else {
+            alert("Ative a permissão nas configurações do navegador.");
+        }
+    }
+
     function render() {
         const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
         const diff = Math.floor((new Date() - new Date(data.start)) / (1000 * 60 * 60 * 24));
         let total = diff + data.manual;
         if (total < 0) { total = 0; data.manual = -diff; localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+        
         document.getElementById('counter').innerText = total;
         const log = document.getElementById('log');
-        if (data.manual > 0) log.innerText = `⚠️ ATENÇÃO: ${data.manual} DIAS ADICIONADOS`;
-        else if (data.manual < 0) log.innerText = `📉 PENALIDADE: ${Math.abs(data.manual)} DIAS REMOVIDOS`;
+        if (data.manual > 0) log.innerText = `⚠️ AJUSTE: +${data.manual} DIAS`;
+        else if (data.manual < 0) log.innerText = `📉 PENALIDADE: ${data.manual} DIAS`;
         else log.innerText = "";
+
         const stars = document.querySelectorAll('.star');
         const thresholds = [1, 3, 7, 15, 30];
         stars.forEach((s, i) => s.classList.toggle('earned', total >= thresholds[i]));
+        
         const ranks = ["Recruta", "Iniciado", "Focado", "Guardião", "Elite", "Mestre"];
         let rIndex = thresholds.findLastIndex(t => total >= t) + 1;
         document.getElementById('rank-name').innerText = ranks[rIndex] || "Recruta";
         document.getElementById('progress-bar').style.width = Math.min((total / 30) * 100, 100) + "%";
     }
+
     function change(val) {
         const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        const diff = Math.floor((new Date() - new Date(data.start)) / (1000 * 60 * 60 * 24));
-        if (diff + data.manual + val >= 0) {
-            data.manual += val;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-            render();
-        }
+        data.manual += val;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        render();
     }
-    function fullReset() { if(confirm("Reiniciar jornada?")) { localStorage.removeItem(STORAGE_KEY); init(); } }
+
+    function fullReset() { if(confirm("Zerar tudo e recomeçar agora?")) { localStorage.removeItem(STORAGE_KEY); init(); } }
     function toggleModal(show) { document.getElementById('infoModal').style.display = show ? 'flex' : 'none'; }
+
     init();
     setInterval(render, 60000);
-
-   // Código para registrar o Vigia e pedir Notificação
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-    .then(() => console.log("Vigia Ativo!"))
-    .catch(err => console.log("Erro no Vigia:", err));
-}
-
-function pedirPermissao() {
-    Notification.requestPermission().then(permission => {
-        if (permission === "granted") {
-            alert("Notificações ativadas com sucesso!");
-            new Notification("Streak Control", {
-                body: "Agora eu posso te enviar avisos por aqui!",
-                icon: "https://cdn-icons-png.flaticon.com/512/1022/1022319.png"
-            });
-        }
-    });
-}
-
-// Tenta pedir a permissão 5 segundos após abrir o app
-setTimeout(pedirPermissao, 5000);
 </script>
 </body>
 </html>
+
