@@ -165,6 +165,28 @@
     function toggleModal(show) { document.getElementById('infoModal').style.display = show ? 'flex' : 'none'; }
     init();
     setInterval(render, 60000);
+
+   // Código para registrar o Vigia e pedir Notificação
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+    .then(() => console.log("Vigia Ativo!"))
+    .catch(err => console.log("Erro no Vigia:", err));
+}
+
+function pedirPermissao() {
+    Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+            alert("Notificações ativadas com sucesso!");
+            new Notification("Streak Control", {
+                body: "Agora eu posso te enviar avisos por aqui!",
+                icon: "https://cdn-icons-png.flaticon.com/512/1022/1022319.png"
+            });
+        }
+    });
+}
+
+// Tenta pedir a permissão 5 segundos após abrir o app
+setTimeout(pedirPermissao, 5000);
 </script>
 </body>
 </html>
